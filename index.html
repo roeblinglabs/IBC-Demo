@@ -65,7 +65,7 @@
                 text: 'Time (s)'
               },
               ticks: {
-                maxTicksLimit: 7 // Approximate number of grid lines
+                stepSize: 10 // Vertical lines at 10 second intervals
               }
             },
             y: {
@@ -186,7 +186,7 @@
           return Math.sqrt(real * real + imag * imag);
         });
 
-        const frequencies = Array.from({ length: magnitudes.length }, (_, i) => i * sampleRate / windowSize);
+        const frequencies = Array.from({ length: magnitudes.length }, (_, i) => (i * sampleRate / windowSize).toFixed(1));
         fftChart.data.labels = frequencies;
         fftChart.data.datasets[0].data = magnitudes;
         fftChart.update();
