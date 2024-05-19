@@ -1,23 +1,229 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceleration Data Visualization</title>
+  <head>
+    <title> Bridge Vibration Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-</head>
-<body>
-    <h1>Real-time Acceleration Z-axis</h1>
-    <canvas id="timeSeriesChart" width="400" height="200"></canvas>
-    <button id="startButton">Start</button>
-    <button id="stopButton">Stop</button>
-    <button id="downloadButton">Download Data</button>
-    <button id="emailButton">Email Data</button>
+    <script src="https://cdn.jsdelivr.net/npm/fft.js"></script>
+  </head>
+  <body>
+    <main>
+      <h2> Instructions</h2>
+      <p>1. Place phone on bridge with screen facing up.</p>
+      <p>2. Select a location with the largest vibrations, such as on the sidewalk at midspan.</p>
+      <p>3. Wait for a truck to appear.</p>
+      <p>4. Recording one minute of vibrations or a few seconds before and after a heavy vehicle passes the span is enough.</p>
 
-    <h2>Frequency Spectrum (FFT)</h2>
-    <canvas id="fftChart" width="400" height="200"></canvas>
+      <div class="p-3 mb-2 bg-secondary" id="demo-div">
+        <button id="start_demo" class="btn btn-lg btn-success py-1" role="button">
+          <h1>Start Measuring Bridge Vibrations</h1>
+        </button>
 
-    <script src="app.js"></script>
-</body>
+        <p>Acceleration Z-axis: <span id="Accelerometer_z">0</span><span> m/s<sup>2</sup></span></p>
+        <p>Data Interval: <span id="Accelerometer_i">0</span><span> ms</span></p>
+        <p>Num. of datapoints: <span class="badge badge-warning" id="num-observed-events">0</span></p>
+
+        <h2>Real-time Acceleration Z-axis</h2>
+        <canvas id="timeSeriesChart" width="400" height="200"></canvas>
+
+        <h2>Frequency Spectrum (FFT)</h2>
+        <canvas id="fftChart" width="400" height="200"></canvas>
+
+        <button id="downloadButton">Download Data</button>
+      </div>
+    </main>
+
+    <button onclick="getLocation()">Get Geolocation</button>
+
+    <p id="demo"></p>
+
+    <script>
+      const sampleRate = 50; // Sample rate in Hz
+      const windowSize = 100; // Number of samples to display in the time series
+
+      let accelData = [];
+      let timeData = Array.from({ length: windowSize }, (_, i) => i / sampleRate - windowSize / sampleRate);
+      let isMeasuring = false;
+
+      // Initialize Chart.js charts
+      const ctxTimeSeries = document.getElementById('timeSeriesChart').getContext('2d');
+      const ctxFFT = document.getElementById('fftChart').getContext('2d');
+
+      const timeSeriesChart = new Chart(ctxTimeSeries, {
+        type: 'line',
+        data: {
+          labels: timeData,
+          datasets: [{
+            label: 'Acceleration Z-axis',
+            data: Array(windowSize).fill(0),
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Time (s)'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Acceleration (m/s^2)'
+              },
+              min: -10,
+              max: 10
+            }
+          }
+        }
+      });
+
+      const fftChart = new Chart(ctxFFT, {
+        type: 'line',
+        data: {
+          labels: [], // Will be set dynamically
+          datasets: [{
+            label: 'FFT',
+            data: [],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Frequency (Hz)'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Amplitude'
+              },
+              min: 0
+            }
+          }
+        }
+      });
+
+      document.getElementById('start_demo').addEventListener('click', toggleMeasurement);
+      document.getElementById('downloadButton').addEventListener('click', downloadData);
+
+      function toggleMeasurement(e) {
+        e.preventDefault();
+        
+        // Request permission for iOS 13+ devices
+        if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
+          DeviceMotionEvent.requestPermission().then(response => {
+            if (response == 'granted') {
+              startStopMeasurement();
+            }
+          });
+        } else {
+          startStopMeasurement();
+        }
+      }
+
+      function startStopMeasurement() {
+        if (isMeasuring) {
+          stopMeasurement();
+        } else {
+          startMeasurement();
+        }
+      }
+
+      function startMeasurement() {
+        isMeasuring = true;
+        accelData = [];
+        document.getElementById("start_demo").innerHTML = "Stop Measuring Bridge Vibrations";
+        document.getElementById("start_demo").classList.remove('btn-success');
+        document.getElementById("start_demo").classList.add('btn-danger');
+        window.addEventListener("devicemotion", handleMotion);
+      }
+
+      function stopMeasurement() {
+        isMeasuring = false;
+        window.removeEventListener("devicemotion", handleMotion);
+        document.getElementById("start_demo").innerHTML = "Restart Measuring Bridge Vibrations";
+        document.getElementById("start_demo").classList.add('btn-success');
+        document.getElementById("start_demo").classList.remove('btn-danger');
+        updateFFTChart();
+      }
+
+      function handleMotion(event) {
+        const z = event.acceleration.z;
+        if (z != null) {
+          if (accelData.length >= windowSize) {
+            accelData.shift();
+          }
+          accelData.push(z);
+          updateFieldIfNotNull('Accelerometer_z', z);
+          updateFieldIfNotNull('Accelerometer_i', event.interval, 2);
+          incrementEventCount();
+          updateTimeSeriesChart();
+        }
+      }
+
+      function updateTimeSeriesChart() {
+        timeSeriesChart.data.datasets[0].data = accelData;
+        timeSeriesChart.update();
+      }
+
+      function updateFFTChart() {
+        const fft = new FFT(windowSize);
+        const input = new Float32Array(accelData);
+        const output = fft.createComplexArray();
+        fft.realTransform(output, input);
+        fft.completeSpectrum(output);
+
+        const magnitudes = output.slice(0, windowSize / 2).map((val, i) => {
+          return Math.sqrt(val[0] * val[0] + val[1] * val[1]);
+        });
+
+        const frequencies = Array.from({ length: magnitudes.length }, (_, i) => i * sampleRate / windowSize);
+        fftChart.data.labels = frequencies;
+        fftChart.data.datasets[0].data = magnitudes;
+        fftChart.update();
+      }
+
+      function incrementEventCount() {
+        let counterElement = document.getElementById("num-observed-events");
+        let eventCount = parseInt(counterElement.innerHTML);
+        counterElement.innerHTML = eventCount + 1;
+      }
+
+      function updateFieldIfNotNull(fieldName, value, precision = 10) {
+        if (value != null)
+          document.getElementById(fieldName).innerHTML = value.toFixed(precision);
+      }
+
+      function downloadData() {
+        const blob = new Blob([JSON.stringify(accelData)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'acceleration_data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      function getLocation() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(showPosition);
+        } else { 
+          document.getElementById("demo").innerHTML = "Geolocation is not supported by this browser.";
+        }
+      }
+
+      function showPosition(position) {
+        document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude + 
+          "<br>Longitude: " + position.coords.longitude + 
+          "<br>Geolocation Accuracy: " + position.coords.accuracy + " (meters)";
+      }
+    </script>
+  </body>
 </html>
