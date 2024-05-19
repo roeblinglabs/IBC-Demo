@@ -14,7 +14,7 @@
       <p>4. Recording one minute of vibrations or a few seconds before and after a heavy vehicle passes the span is enough.</p>
 
       <div class="p-3 mb-2 bg-secondary" id="demo-div">
-        <button id="start_demo" class="btn btn-lg btn-success py-1" role="button">
+        <button id="start_demo" class="btn btn-lg btn-success py-1" style="font-size: 24px;">
           <h1>Start Measuring Bridge Vibrations</h1>
         </button>
 
@@ -32,15 +32,14 @@
       </div>
     </main>
 
-    <button onclick="getLocation()">Get Geolocation</button>
-
     <p id="demo"></p>
 
     <script>
       const sampleRate = 50; // Sample rate in Hz
-      const windowSize = sampleRate * 60; // Display 60 seconds of data
+      const windowSize = sampleRate * 30; // Display 30 seconds of data
       let accelData = [];
       let isMeasuring = false;
+      let geolocation = null;
 
       // Initialize Chart.js charts
       const ctxTimeSeries = document.getElementById('timeSeriesChart').getContext('2d');
@@ -65,7 +64,7 @@
                 text: 'Time (s)'
               },
               ticks: {
-                stepSize: 10 // Vertical lines at 10 second intervals
+                stepSize: 5 // Vertical lines at 5-second intervals
               }
             },
             y: {
@@ -73,8 +72,8 @@
                 display: true,
                 text: 'Acceleration (m/s^2)'
               },
-              min: -2,
-              max: 2
+              min: -5,
+              max: 5
             }
           }
         }
@@ -115,7 +114,7 @@
 
       function toggleMeasurement(e) {
         e.preventDefault();
-        
+
         // Request permission for iOS 13+ devices
         if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
           DeviceMotionEvent.requestPermission().then(response => {
@@ -139,9 +138,11 @@
       function startMeasurement() {
         isMeasuring = true;
         accelData = [];
+        getGeolocation();
         document.getElementById("start_demo").innerHTML = "Stop Measuring Bridge Vibrations";
         document.getElementById("start_demo").classList.remove('btn-success');
         document.getElementById("start_demo").classList.add('btn-danger');
+        document.getElementById("start_demo").style.fontSize = "24px";
         window.addEventListener("devicemotion", handleMotion);
       }
 
@@ -151,6 +152,7 @@
         document.getElementById("start_demo").innerHTML = "Restart Measuring Bridge Vibrations";
         document.getElementById("start_demo").classList.add('btn-success');
         document.getElementById("start_demo").classList.remove('btn-danger');
+        document.getElementById("start_demo").style.fontSize = "24px";
         updateFFTChart();
       }
 
@@ -204,30 +206,41 @@
       }
 
       function downloadData() {
-        const blob = new Blob([JSON.stringify(accelData)], { type: 'application/json' });
+        const csvData = accelData.map((z, index) => {
+          const timestamp = (index / sampleRate).toFixed(2);
+          const latitude = geolocation ? geolocation.coords.latitude : '';
+          const longitude = geolocation ? geolocation.coords.longitude : '';
+          const altitude = geolocation ? (geolocation.coords.altitude || '') : '';
+          const temperature = ''; // If you have temperature data, fill it here
+          return `${timestamp},${z},${latitude},${longitude},${altitude},${temperature}`;
+        });
+
+        const csvHeader = 'Timestamp,Z-axis Acceleration (m/s^2),Latitude,Longitude,Elevation,Temperature';
+        const csvContent = [csvHeader, ...csvData].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'acceleration_data.json';
+        a.download = 'acceleration_data.csv';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
       }
 
-      function getLocation() {
+      function getGeolocation() {
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(showPosition);
+          navigator.geolocation.getCurrentPosition(position => {
+            geolocation = position;
+            document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude + 
+              "<br>Longitude: " + position.coords.longitude + 
+              "<br>Geolocation Accuracy: " + position.coords.accuracy + " (meters)";
+          });
         } else { 
           document.getElementById("demo").innerHTML = "Geolocation is not supported by this browser.";
         }
       }
-
-      function showPosition(position) {
-        document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude + 
-          "<br>Longitude: " + position.coords.longitude + 
-          "<br>Geolocation Accuracy: " + position.coords.accuracy + " (meters)";
-      }
     </script>
   </body>
 </html>
+
 
