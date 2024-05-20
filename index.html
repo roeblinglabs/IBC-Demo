@@ -1,20 +1,26 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title> Bridge Vibration Tool</title>
+    <title>Bridge Vibration Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fft.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/0.3.6/fft.min.js"></script>
+    <style>
+      #start_demo {
+        font-size: 24px;
+        padding: 20px;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h2> Instructions</h2>
+      <h2>Instructions</h2>
       <p>1. Place phone on bridge with screen facing up.</p>
       <p>2. Select a location with the largest vibrations, such as on the sidewalk at midspan.</p>
       <p>3. Wait for a truck to appear.</p>
       <p>4. Recording one minute of vibrations or a few seconds before and after a heavy vehicle passes the span is enough.</p>
 
       <div class="p-3 mb-2 bg-secondary" id="demo-div">
-        <button id="start_demo" class="btn btn-lg btn-success py-1" style="font-size: 24px;">
+        <button id="start_demo" class="btn btn-lg btn-success py-1">
           <h1>Start Measuring Bridge Vibrations</h1>
         </button>
 
@@ -72,8 +78,8 @@
                 display: true,
                 text: 'Acceleration (m/s^2)'
               },
-              suggestedMin: -5,
-              suggestedMax: 5
+              min: -5,
+              max: 5
             }
           }
         }
@@ -173,8 +179,8 @@
       function updateTimeSeriesChart() {
         const minVal = Math.min(...accelData);
         const maxVal = Math.max(...accelData);
-        timeSeriesChart.options.scales.y.suggestedMin = Math.floor(minVal) - 1;
-        timeSeriesChart.options.scales.y.suggestedMax = Math.ceil(maxVal) + 1;
+        timeSeriesChart.options.scales.y.min = Math.floor(minVal) - 1;
+        timeSeriesChart.options.scales.y.max = Math.ceil(maxVal) + 1;
         timeSeriesChart.data.datasets[0].data = accelData;
         timeSeriesChart.update();
       }
@@ -226,25 +232,25 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'acceleration_data.csv';
-        document.body.appendChild(a);
+        a.download = 'bridge_vibration_data.csv';
         a.click();
-        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
 
       function getGeolocation() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(position => {
             geolocation = position;
-            document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude + 
-              "<br>Longitude: " + position.coords.longitude + 
+            document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude +
+              "<br>Longitude: " + position.coords.longitude +
               "<br>Geolocation Accuracy: " + position.coords.accuracy + " (meters)";
           });
-        } else { 
+        } else {
           document.getElementById("demo").innerHTML = "Geolocation is not supported by this browser.";
         }
       }
     </script>
   </body>
 </html>
+
 
