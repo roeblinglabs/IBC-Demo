@@ -3,7 +3,6 @@
   <head>
     <title>Bridge Vibration Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/0.3.6/fft.min.js"></script>
     <style>
       #start_demo, #downloadButton {
         font-size: 24px;
@@ -32,9 +31,6 @@
         <h2>Real-time Acceleration Z-axis</h2>
         <canvas id="timeSeriesChart" width="400" height="200"></canvas>
 
-        <h2>Frequency Spectrum (FFT)</h2>
-        <canvas id="fftChart" width="400" height="200"></canvas>
-
         <button id="downloadButton" class="btn btn-lg btn-primary py-1">Download Data</button>
         <h2>Contact with suggestions: scott@roeblinglabs.com</h2>
       </div>
@@ -49,10 +45,8 @@
       let isMeasuring = false;
       let geolocation = null;
 
-      // Initialize Chart.js charts
+      // Initialize Chart.js chart
       const ctxTimeSeries = document.getElementById('timeSeriesChart').getContext('2d');
-      const ctxFFT = document.getElementById('fftChart').getContext('2d');
-
       const timeSeriesChart = new Chart(ctxTimeSeries, {
         type: 'line',
         data: {
@@ -82,37 +76,6 @@
               },
               min: -5,
               max: 5
-            }
-          }
-        }
-      });
-
-      const fftChart = new Chart(ctxFFT, {
-        type: 'line',
-        data: {
-          labels: [], // Will be set dynamically
-          datasets: [{
-            label: 'FFT',
-            data: [],
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Frequency (Hz)'
-              }
-            },
-            y: {
-              type: 'logarithmic',
-              title: {
-                display: true,
-                text: 'Log(Amplitude)'
-              },
-              min: 1e-2
             }
           }
         }
@@ -162,7 +125,6 @@
         document.getElementById("start_demo").classList.add('btn-success');
         document.getElementById("start_demo").classList.remove('btn-danger');
         document.getElementById("start_demo").style.fontSize = "24px";
-        updateFFTChart();
       }
 
       function handleMotion(event) {
@@ -186,28 +148,6 @@
         timeSeriesChart.options.scales.y.max = Math.ceil(maxVal) + 1;
         timeSeriesChart.data.datasets[0].data = accelData;
         timeSeriesChart.update();
-      }
-
-      function updateFFTChart() {
-        if (accelData.length === 0) return;
-
-        const fft = new FFT(windowSize);
-        const input = new Float32Array(windowSize).fill(0);
-        accelData.forEach((v, i) => input[i] = v);
-        const output = fft.createComplexArray();
-        fft.realTransform(output, input);
-        fft.completeSpectrum(output);
-
-        const magnitudes = Array.from({ length: windowSize / 2 }, (_, i) => {
-          const real = output[2 * i];
-          const imag = output[2 * i + 1];
-          return Math.sqrt(real * real + imag * imag);
-        });
-
-        const frequencies = Array.from({ length: magnitudes.length }, (_, i) => (i * sampleRate / windowSize).toFixed(1));
-        fftChart.data.labels = frequencies;
-        fftChart.data.datasets[0].data = magnitudes;
-        fftChart.update();
       }
 
       function incrementEventCount() {
@@ -257,5 +197,3 @@
     </script>
   </body>
 </html>
-
-
