@@ -72,8 +72,8 @@
                 display: true,
                 text: 'Acceleration (m/s^2)'
               },
-              min: -5,
-              max: 5
+              suggestedMin: -5,
+              suggestedMax: 5
             }
           }
         }
@@ -171,13 +171,18 @@
       }
 
       function updateTimeSeriesChart() {
+        const minVal = Math.min(...accelData);
+        const maxVal = Math.max(...accelData);
+        timeSeriesChart.options.scales.y.suggestedMin = Math.floor(minVal) - 1;
+        timeSeriesChart.options.scales.y.suggestedMax = Math.ceil(maxVal) + 1;
         timeSeriesChart.data.datasets[0].data = accelData;
         timeSeriesChart.update();
       }
 
       function updateFFTChart() {
         const fft = new FFT(windowSize);
-        const input = new Float32Array(accelData);
+        const input = new Float32Array(windowSize).fill(0);
+        accelData.forEach((v, i) => input[i] = v);
         const output = fft.createComplexArray();
         fft.realTransform(output, input);
         fft.completeSpectrum(output);
@@ -242,5 +247,4 @@
     </script>
   </body>
 </html>
-
 
