@@ -3,6 +3,7 @@
   <head>
     <title>Bridge Vibration Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dsp.js"></script>
     <style>
       #start_demo, #downloadButton {
         font-size: 24px;
@@ -31,6 +32,9 @@
         <h2>Real-time Acceleration Z-axis</h2>
         <canvas id="timeSeriesChart" width="400" height="200"></canvas>
 
+        <h2>Power Spectrum Density (PSD)</h2>
+        <canvas id="psdChart" width="400" height="200"></canvas>
+
         <button id="downloadButton" class="btn btn-lg btn-primary py-1">Download Data</button>
         <h2>Contact with suggestions: scott@roeblinglabs.com</h2>
       </div>
@@ -45,8 +49,10 @@
       let isMeasuring = false;
       let geolocation = null;
 
-      // Initialize Chart.js chart
+      // Initialize Chart.js charts
       const ctxTimeSeries = document.getElementById('timeSeriesChart').getContext('2d');
+      const ctxPSD = document.getElementById('psdChart').getContext('2d');
+
       const timeSeriesChart = new Chart(ctxTimeSeries, {
         type: 'line',
         data: {
@@ -76,6 +82,39 @@
               },
               min: -5,
               max: 5
+            }
+          }
+        }
+      });
+
+      const psdChart = new Chart(ctxPSD, {
+        type: 'line',
+        data: {
+          labels: [], // Will be set dynamically
+          datasets: [{
+            label: 'PSD',
+            data: [],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Frequency (Hz)'
+              },
+              min: 0,
+              max: 25
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'PSD (g^2/Hz)'
+              },
+              min: 0,
+              max: 0.02
             }
           }
         }
@@ -125,6 +164,7 @@
         document.getElementById("start_demo").classList.add('btn-success');
         document.getElementById("start_demo").classList.remove('btn-danger');
         document.getElementById("start_demo").style.fontSize = "24px";
+        computePSD();
       }
 
       function handleMotion(event) {
@@ -193,6 +233,20 @@
         } else {
           document.getElementById("demo").innerHTML = "Geolocation is not supported by this browser.";
         }
+      }
+
+      function computePSD() {
+        const signal = new Float32Array(accelData);
+        const fft = new FFT(sampleRate, signal.length);
+        const psd = fft.calculatePSD(signal);
+
+        const frequencies = fft.calculateFrequencies();
+        const limitedFrequencies = frequencies.filter(f => f >= 0 && f <= 25);
+        const limitedPSD = psd.slice(0, limitedFrequencies.length);
+
+        psdChart.data.labels = limitedFrequencies;
+        psdChart.data.datasets[0].data = limitedPSD;
+        psdChart.update();
       }
     </script>
   </body>
