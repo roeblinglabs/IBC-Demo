@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/0.3.6/fft.min.js"></script>
     <style>
-      #start_demo {
+      #start_demo, #downloadButton {
         font-size: 24px;
         padding: 20px;
       }
@@ -34,7 +34,7 @@
         <h2>Frequency Spectrum (FFT)</h2>
         <canvas id="fftChart" width="400" height="200"></canvas>
 
-        <button id="downloadButton">Download Data</button>
+        <button id="downloadButton" class="btn btn-lg btn-primary py-1">Download Data</button>
       </div>
     </main>
 
@@ -105,11 +105,12 @@
               }
             },
             y: {
+              type: 'logarithmic',
               title: {
                 display: true,
-                text: 'Amplitude'
+                text: 'Log(Amplitude)'
               },
-              min: 0
+              min: 1e-2
             }
           }
         }
@@ -186,6 +187,8 @@
       }
 
       function updateFFTChart() {
+        if (accelData.length === 0) return;
+
         const fft = new FFT(windowSize);
         const input = new Float32Array(windowSize).fill(0);
         accelData.forEach((v, i) => input[i] = v);
@@ -232,7 +235,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'bridge_vibration_data.csv';
+        a.download = 'vibration_data.csv';
         a.click();
         URL.revokeObjectURL(url);
       }
