@@ -1,332 +1,80 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Bridge Vibration Tool</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script language="javascript" src="processing.js"></script>    
-    <script language="javascript" src="dsp.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Roebling Labs</title>
     <style>
-      #start_demo, #downloadButton, #downloadSpectrumButton {
-        font-size: 24px;
-        padding: 20px;
-      }
+        .button {
+            font-size: 1.5em; /* h2 font size */
+            padding: 10px 20px;
+            background-color: lightgrey;
+            color: blue;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: grey;
+        }
     </style>
-  </head>
-  <body>
-    <main>
-      <h2>Bridge Vibration Tool by <a href="http://www.roeblinglabs.com">Roebling Labs</a> </h2>
-      <h2>Instructions</h2>
-      <p>1. Place phone on bridge with screen facing up.</p>
-      <p>2. Select a safe location with the large vibrations, such as on the sidewalk at one-third span.</p>
-      <p>3. Wait for a truck to appear.</p>
-      <p>4. Recording ten seconds before and after a heavy vehicle passes the span is enough.</p>
-
-      <div class="p-3 mb-2 bg-secondary" id="demo-div">
-        <button id="start_demo" class="btn btn-lg btn-success py-1">
-          <h1>Start Measuring Bridge Vibrations</h1>
-        </button>
-
-        <p>Acceleration Z-axis: <span id="Accelerometer_z">0</span><span> m/s<sup>2</sup></span></p>
-        <p>Data Interval: <span id="Accelerometer_i">0</span><span> ms</span></p>
-        <p>Num. of datapoints: <span class="badge badge-warning" id="num-observed-events">0</span></p>
-
-        <h2>Real-time Acceleration Z-axis</h2>
-        <canvas id="timeSeriesChart" width="400" height="200"></canvas>
-
-        <h2>Power Spectrum Density (PSD)</h2>
-        <canvas id="psdChart" width="400" height="200"></canvas>
-
-        <button id="downloadButton" class="btn btn-lg btn-primary py-1">Download Accelerometer Data</button>
-        <button id="downloadSpectrumButton" class="btn btn-lg btn-secondary py-1">Download Spectrum Data</button>
-        <h2>Contact with suggestions: scott@roeblinglabs.com</h2>
-      </div>
-    </main>
-
-    <p id="demo"></p>
-
     <script>
-      const sampleRate = 50; // Sample rate in Hz
-      const windowSize = sampleRate * 30; // Display 30 seconds of data
-      let accelData = [];
-      let isMeasuring = false;
-      let geolocation = null;
-      let psdData = { frequencies: [], psdValues: [] };
+        async function submitForm(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const formId = '1FAIpQLScDu0XgF8pLookT2HHkEBrxhMpn6Io9o11ptZ2NPcsnZl3RfQ'; // Replace with your Google Form ID
+            const entry = 'entry.YPqjbf'; // Replace with your form entry ID for email field
 
-      // Initialize Chart.js charts
-      const ctxTimeSeries = document.getElementById('timeSeriesChart').getContext('2d');
-      const ctxPSD = document.getElementById('psdChart').getContext('2d');
+            const url = `https://docs.google.com/forms/d/e/${formId}/formResponse`;
+            const formData = new FormData();
+            formData.append(entry, email);
 
-      const timeSeriesChart = new Chart(ctxTimeSeries, {
-        type: 'line',
-        data: {
-          labels: Array.from({ length: windowSize }, (_, i) => (i / sampleRate).toFixed(1)),
-          datasets: [{
-            label: 'Acceleration Z-axis',
-            data: Array(windowSize).fill(0),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Time (s)'
-              },
-              ticks: {
-                stepSize: 5 // Vertical lines at 5-second intervals
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'Acceleration (m/s^2)'
-              },
-              min: -5,
-              max: 5
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: formData
+                });
+
+                window.location.href = "https://roeblinglabs.github.io/bridgevibes/";
+            } catch (error) {
+                console.error('Error!', error.message);
             }
-          }
         }
-      });
-
-      const psdChart = new Chart(ctxPSD, {
-        type: 'line',
-        data: {
-          labels: [], // Will be set dynamically
-          datasets: [{
-            label: 'PSD',
-            data: [],
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Frequency (Hz)'
-              },
-              min: 0,
-              max: 25,
-              ticks: {
-                stepSize: 5 // Vertical lines at 5 Hz intervals
-              }
-            },
-            y: {
-              type: 'logarithmic',
-              title: {
-                display: true,
-                text: 'PSD (g^2/Hz)'
-              },
-              ticks: {
-                callback: function(value) {
-                  return value.toExponential(1); // Display values in scientific notation
-                },
-                min: 1e-4, // Initial value, will be adjusted dynamically
-                max: 0.02 // Initial value, will be adjusted dynamically
-              }
-            }
-          }
-        }
-      });
-
-      document.getElementById('start_demo').addEventListener('click', toggleMeasurement);
-      document.getElementById('downloadButton').addEventListener('click', downloadData);
-      document.getElementById('downloadSpectrumButton').addEventListener('click', downloadSpectrumData);
-
-      function toggleMeasurement(e) {
-        e.preventDefault();
-
-        // Request permission for iOS 13+ devices
-        if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
-          DeviceMotionEvent.requestPermission().then(response => {
-            if (response == 'granted') {
-              startStopMeasurement();
-            }
-          });
-        } else {
-          startStopMeasurement();
-        }
-      }
-
-      function startStopMeasurement() {
-        if (isMeasuring) {
-          stopMeasurement();
-        } else {
-          startMeasurement();
-        }
-      }
-
-      function startMeasurement() {
-        isMeasuring = true;
-        accelData = [];
-        getGeolocation();
-        document.getElementById("start_demo").innerHTML = "Stop Measuring Bridge Vibrations";
-        document.getElementById("start_demo").classList.remove('btn-success');
-        document.getElementById("start_demo").classList.add('btn-danger');
-        document.getElementById("start_demo").style.fontSize = "24px";
-        window.addEventListener("devicemotion", handleMotion);
-      }
-
-      function stopMeasurement() {
-        isMeasuring = false;
-        window.removeEventListener("devicemotion", handleMotion);
-        document.getElementById("start_demo").innerHTML = "Restart Measuring Bridge Vibrations";
-        document.getElementById("start_demo").classList.add('btn-success');
-        document.getElementById("start_demo").classList.remove('btn-danger');
-        document.getElementById("start_demo").style.fontSize = "24px";
-        computePSD();
-      }
-
-      function handleMotion(event) {
-        const z = event.acceleration.z;
-        if (z != null) {
-          if (accelData.length >= windowSize) {
-            accelData.shift();
-          }
-          accelData.push(z);
-          updateFieldIfNotNull('Accelerometer_z', z);
-          updateFieldIfNotNull('Accelerometer_i', event.interval, 2);
-          incrementEventCount();
-          updateTimeSeriesChart();
-        }
-      }
-
-      function updateTimeSeriesChart() {
-        const minVal = Math.min(...accelData);
-        const maxVal = Math.max(...accelData);
-        timeSeriesChart.options.scales.y.min = Math.floor(minVal) - 1;
-        timeSeriesChart.options.scales.y.max = Math.ceil(maxVal) + 1;
-        timeSeriesChart.data.datasets[0].data = accelData;
-        timeSeriesChart.update();
-      }
-
-      function incrementEventCount() {
-        let counterElement = document.getElementById("num-observed-events");
-        let eventCount = parseInt(counterElement.innerHTML);
-        counterElement.innerHTML = eventCount + 1;
-      }
-
-      function updateFieldIfNotNull(fieldName, value, precision = 10) {
-        if (value != null)
-          document.getElementById(fieldName).innerHTML = value.toFixed(precision);
-      }
-
-      function downloadData() {
-        const date = new Date();
-        const dateString = date.toLocaleDateString();
-        const timeString = date.toLocaleTimeString();
-
-        const csvHeader = `Longitude,${geolocation ? geolocation.coords.longitude : ''}\n` +
-                          `Latitude,${geolocation ? geolocation.coords.latitude : ''}\n` +
-                          `Elevation,${geolocation ? (geolocation.coords.altitude || '') : ''}\n` +
-                          `Temperature,\n` + // If you have temperature data, fill it here
-                          `Date,${dateString}\n` +
-                          `Time,${timeString}\n\n` +
-                          `Timestamp,Z-axis Acceleration (m/s^2)`;
-
-        const csvData = accelData.map((z, index) => {
-          const timestamp = (index / sampleRate).toFixed(2);
-          return `${timestamp},${z}`;
-        });
-
-        const csvContent = [csvHeader, ...csvData].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'vibration_data.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-
-      function downloadSpectrumData() {
-        const date = new Date();
-        const dateString = date.toLocaleDateString();
-        const timeString = date.toLocaleTimeString();
-
-        const csvHeader = `Longitude,${geolocation ? geolocation.coords.longitude : ''}\n` +
-                          `Latitude,${geolocation ? geolocation.coords.latitude : ''}\n` +
-                          `Elevation,${geolocation ? (geolocation.coords.altitude || '') : ''}\n` +
-                          `Temperature,\n` + // If you have temperature data, fill it here
-                          `Date,${dateString}\n` +
-                          `Time,${timeString}\n\n` +
-                          `Frequency (Hz),PSD (g^2/Hz)`;
-
-        const csvData = psdData.frequencies.map((frequency, index) => {
-          return `${frequency},${psdData.psdValues[index]}`;
-        });
-
-        const csvContent = [csvHeader, ...csvData].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'spectrum_data.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-
-      function getGeolocation() {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(position => {
-            geolocation = position;
-            const date = new Date();
-            const dateString = date.toLocaleDateString();
-            const timeString = date.toLocaleTimeString();
-            document.getElementById("demo").innerHTML = "Latitude: " + position.coords.latitude +
-              "<br>Longitude: " + position.coords.longitude +
-              "<br>Geolocation Accuracy: " + position.coords.accuracy + " meters" +
-              "<br>Date: " + dateString +
-              "<br>Time: " + timeString;
-          });
-        } else {
-          document.getElementById("demo").innerHTML = "Geolocation is not supported by this browser.";
-        }
-      }
-
-      function generateSineWave(duration, frequency, amplitude) {
-        const numSamples = duration * sampleRate;
-        const angularFrequency = 2 * Math.PI * frequency;
-        const sineWave = [];
-
-        for (let i = 0; i < numSamples; i++) {
-          const time = i / sampleRate;
-          const sineValue = amplitude * Math.sin(angularFrequency * time);
-          sineWave.push(sineValue);
-        }
-
-        return sineWave;
-      } 
-
-    function computePSD() {
-      const signalLength = accelData.length;
-      const paddedLength = Math.pow(2, Math.ceil(Math.log2(signalLength)));
-      const paddedSignal = new Float32Array(paddedLength);
-      paddedSignal.set(accelData);
-      
-      const fft = new FFT(paddedLength, sampleRate);
-      fft.forward(paddedSignal);
-      const psd = fft.spectrum;
-
-      const frequencyStep = sampleRate / paddedLength;
-      const frequencies = Array.from({ length: psd.length }, (_, i) => i * frequencyStep);
-      const limitedFrequencies = frequencies.filter(f => f <= 25);
-      const limitedPSD = psd.slice(0, limitedFrequencies.length);
-
-      const minPSD = Math.min(...limitedPSD.filter(v => v > 0)); // Find the minimum non-zero value for the Y-axis range
-      const maxPSD = Math.max(...limitedPSD);
-
-      psdChart.options.scales.y.min = minPSD;
-      psdChart.options.scales.y.max = maxPSD;
-      psdChart.data.labels = Array.from({ length: 26 }, (_, i) => i);
-      psdChart.data.datasets[0].data = limitedPSD;
-      psdChart.update();
-
-      psdData = { frequencies: limitedFrequencies, psdValues: limitedPSD };
-    }
     </script>
-  </body>
+</head>
+<body>
+    <h1>Roebling Labs</h1>
+    <h2>Detect structural damage in bridges</h2>
+    <p>Our Bridge Vibration Tool uses your smartphone to measure bridge vibrations, calculate natural frequencies, and detect damage in your structure.</p>
+    <p>
+        <form id="form" onsubmit="submitForm(event)">
+            Enter your email: <input type="email" id="email" required>
+            <button type="submit" class="button">Get Started Now</button>
+        </form>
+    </p>
+    <p>Try for free. Unsubscribe anytime.</p>
+    <p><a href="https://roeblinglabs.github.io/bridgevibes/">Watch Demo Video</a></p>
+    <p>.................................</p>
+    <h2>About</h2>
+    <p>Roebling Labs builds bridge assessment tools.</p>
+    <p>Vision: Sensors with real-time analytics for every bridge.</p>
+    <p></p>
+    <h2>Master Plan</h2>
+    <p>1. Build a <a href="https://roeblinglabs.github.io/bridgevibes/">Bridge Vibration Tool</a> for professional bridge inspectors. (Status: Done)</p>
+    <p>     It uses your smartphone accelerometer to measure bridge vibrations, calculate natural frequencies, and detect damage in your structure.</p>
+    <p>2. Use that tool to engage with bridge owners and engineers to gather feedback. (Status: In Progress)</p>
+    <p>3. Use that feedback to build new, better bridge assessment tools.</p>
+    <p>4. Incorporate crowdsourced data and non-contact (video) sensors.</p>
+    <p></p>
+    <h2>References</h2>
+    <p>Read our article <a href="https://www.buildbigideas.com/_files/ugd/db8110_d6b141b9a8cc41d9a60bc258ce355855.pdf">Emerging Technologies in Structural Health Monitoring</a> in Bridge Design & Engineering Magazine, published Fourth Quarter 2023, Issue 113.</p>
+    <p>See our workshop at the <a href="https://eswp.com/bridge/program/wednesday-am/#w07">International Bridge Conference, 2024</a></p>
+    <p>Associated with the <a href="https://www.bu.edu/innovate/about/build-lab/">Boston University BUild Lab</a></p>
+    <p></p>
+    <h2>Contact Us</h2>
+    <p>Submit suggestions to: <a href="mailto:scott@roeblinglabs.com">scott@roeblinglabs.com</a></p>
+    <p>Connect with us on <a href="https://www.linkedin.com/in/scottsnellingpe/">LinkedIn</a></p>
+</body>
 </html>
