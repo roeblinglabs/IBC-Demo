@@ -1,80 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Roebling Labs</title>
-    <style>
-        .button {
-            font-size: 1.5em; /* h2 font size */
-            padding: 10px 20px;
-            background-color: lightgrey;
-            color: blue;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .button:hover {
-            background-color: grey;
-        }
-    </style>
-    <script>
-        async function submitForm(event) {
-            event.preventDefault();
-            const email = document.getElementById('email').value;
-            const formId = '1FAIpQLScDu0XgF8pLookT2HHkEBrxhMpn6Io9o11ptZ2NPcsnZl3RfQ'; // Replace with your Google Form ID
-            const entry = 'entry.YPqjbf'; // Replace with your form entry ID for email field
-
-            const url = `https://docs.google.com/forms/d/e/${formId}/formResponse`;
-            const formData = new FormData();
-            formData.append(entry, email);
-
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: formData
-                });
-
-                window.location.href = "https://roeblinglabs.github.io/bridgevibes/";
-            } catch (error) {
-                console.error('Error!', error.message);
-            }
-        }
-    </script>
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+<link rel="stylesheet" href="assets/style.css">  
+  
 </head>
-<body>
-    <h1>Roebling Labs</h1>
-    <h2>Detect structural damage in bridges</h2>
-    <p>Our Bridge Vibration Tool uses your smartphone to measure bridge vibrations, calculate natural frequencies, and detect damage in your structure.</p>
-    <p>
-        <form id="form" onsubmit="submitForm(event)">
-            Enter your email: <input type="email" id="email" required>
-            <button type="submit" class="button">Get Started Now</button>
-        </form>
-    </p>
-    <p>Try for free. Unsubscribe anytime.</p>
-    <p><a href="https://roeblinglabs.github.io/bridgevibes/">Watch Demo Video</a></p>
-    <p>.................................</p>
-    <h2>About</h2>
-    <p>Roebling Labs builds bridge assessment tools.</p>
-    <p>Vision: Sensors with real-time analytics for every bridge.</p>
-    <p></p>
-    <h2>Master Plan</h2>
-    <p>1. Build a <a href="https://roeblinglabs.github.io/bridgevibes/">Bridge Vibration Tool</a> for professional bridge inspectors. (Status: Done)</p>
-    <p>     It uses your smartphone accelerometer to measure bridge vibrations, calculate natural frequencies, and detect damage in your structure.</p>
-    <p>2. Use that tool to engage with bridge owners and engineers to gather feedback. (Status: In Progress)</p>
-    <p>3. Use that feedback to build new, better bridge assessment tools.</p>
-    <p>4. Incorporate crowdsourced data and non-contact (video) sensors.</p>
-    <p></p>
-    <h2>References</h2>
-    <p>Read our article <a href="https://www.buildbigideas.com/_files/ugd/db8110_d6b141b9a8cc41d9a60bc258ce355855.pdf">Emerging Technologies in Structural Health Monitoring</a> in Bridge Design & Engineering Magazine, published Fourth Quarter 2023, Issue 113.</p>
-    <p>See our workshop at the <a href="https://eswp.com/bridge/program/wednesday-am/#w07">International Bridge Conference, 2024</a></p>
-    <p>Associated with the <a href="https://www.bu.edu/innovate/about/build-lab/">Boston University BUild Lab</a></p>
-    <p></p>
-    <h2>Contact Us</h2>
-    <p>Submit suggestions to: <a href="mailto:scott@roeblinglabs.com">scott@roeblinglabs.com</a></p>
-    <p>Connect with us on <a href="https://www.linkedin.com/in/scottsnellingpe/">LinkedIn</a></p>
-</body>
-</html>
+
+
+<div id="emailFormCard" class="card">
+  <div class="image">
+    <img src="https://cdn.pixabay.com/photo/2019/01/12/16/21/breakfast-3928800_960_720.jpg" alt="img">
+  </div>
+  <div id="subscribeForm" class="subscribe">
+    <h2>Contact me</h2>
+    <p>Want to get in touch? Drop a e-mail!</p>
+<form name="gform" id="gform" enctype="text/plain" action="GOOGLE_FORM_URL" target="hidden_iframe" onsubmit="submitted=true;">
+  
+  <fieldset>
+   <input style="background:#3c3c44;margin-bottom:10px;" type="text" placeholder="Name"  name="Google_Entry_ID_Name" id="Google_Entry_ID_Name" required>
+    
+    <input style="background:#3c3c44;margin-bottom:10px;" type="email" placeholder="Email"  name="Google_Entry_ID_Email" id="Google_Entry_ID_Email" required>
+    
+ <textarea name="Google_Entry_ID_TextArea" class="emailFormCard-TextArea" placeholder="How can I help you?" id="Google_Entry_ID_TextArea" cols="30" rows="5" required></textarea>
+  
+
+   
+
+   
+    <input type="submit" value="Send">
+  </fieldset>
+</form>
+    
+
+
+   </div>
+</div>  
+
+
+<iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+
+ <script type="text/javascript">
+
+         var Google_Entry_ID_Name="entry.1416717319";
+  
+         var Google_Entry_ID_Email="entry.2145923340";  
+    
+         var Google_Entry_ID_TextArea="entry.355339717";     
+         
+          // Put your Google Form Link Here  (Make sure to use correct link as documented)
+         var Google_Form_Link="https://docs.google.com/forms/d/e/1FAIpQLSfy-tWg12-h-gbtJbk5g5GTPUpNZg2iML1fPgcAkNgJfqgzMQ/formResponse?"  
+    
+  </script> 
+
+<script src="assets/replace-vars.js">
+  </script>
+<script type="text/javascript" src="assets/email-form.js"></script> 
