@@ -25,12 +25,11 @@
     <h2>Detect structural damage in bridges</h2>
     <p>Our Bridge Vibration Tool uses your smartphone to measure bridge vibrations, calculate natural frequencies, and detect damage in your structure.</p>
     <p>
-        <form id="emailSignInForm" style="display: inline-block; margin-right: 20px;">
+        <form id="emailSignInForm" style="display: inline-block;">
             <label for="email" style="display: block;">Sign Up:</label>
             <input type="email" id="email" name="email" placeholder="Enter your email" required>
-            <button type="submit" class="button">Sign In</button>
+            <button type="submit" class="button">Get Started Now</button>
         </form>
-        <a href="https://roeblinglabs.github.io/bridgevibes/" class="button">Get Started Now</a>
     </p>
     <p>Try for free.</p>
     <p><a href="https://youtu.be/AiOQPEUpOTU?si=j4c2Rd0jbu4iQnc6" target="_blank">Watch Demo Video</a></p>
@@ -81,6 +80,7 @@
                 console.log(data); // Log the response for debugging
                 if (data.id) {
                     alert('Email signed in successfully!');
+                    window.location.href = 'https://roeblinglabs.github.io/bridgevibes/';
                 } else {
                     alert('There was a problem signing in. Please try again.');
                 }
